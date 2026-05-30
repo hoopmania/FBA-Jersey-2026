@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>สั่งซื้อชุดแข่ง FBA </title>
+<title>สั่งซื้อชุดแข่ง Sunday Slammers</title>
 
 <!-- ============================================================
   📸 วิธีเปลี่ยนรูปภาพ — แก้ที่ CONFIG ด้านล่างนี้เลย
@@ -16,10 +16,10 @@ const CONFIG = {
   // 🏦 ข้อมูลธนาคารสำหรับแสดงผล
   bankName: 'ธนาคารกสิกรไทย (KBank)',
   accountName: 'Mr. Samon Mekjumroen',
-  accountNumber: '061-2-59517-8',
+  accountNumber: 'รอเลขบัญชีจากเพื่อน',  // ← แก้ตรงนี้เมื่อได้เลขบัญชีมาแล้ว
 
   // 👤 LINE สำหรับติดต่อ
-  lineId: 'kosamon',
+  lineId: 'Kenchiro Japan',
 
   // 📸 รูปภาพ — วางไฟล์รูปไว้ในโฟลเดอร์เดียวกับ HTML แล้วแก้ชื่อด้านล่าง
   images: {
@@ -34,7 +34,7 @@ const CONFIG = {
   },
 
   // 📋 ชื่อทีม (แสดงในหน้าเว็บ)
-  teamName: 'FBA',
+  teamName: 'Sunday Slammers',
 
   // 🌐 Google Apps Script URL สำหรับรับข้อมูลออเดอร์ (ตั้งค่าทีหลังได้)
   // ถ้ายังไม่มี ปล่อยว่างไว้ก่อน — ระบบจะข้ามขั้นตอนนี้
@@ -446,7 +446,7 @@ const CONFIG = {
 
 <header>
   <div class="badge">🏀 Official Order</div>
-  <h1 id="team-name-header">FBA</h1>
+  <h1 id="team-name-header">Sunday Slammers</h1>
   <p>ใบสั่งซื้อชุดแข่งอย่างเป็นทางการ</p>
 </header>
 
@@ -707,7 +707,7 @@ document.getElementById('bd-accno').textContent = CONFIG.accountNumber;
 
 // ── State ─────────────────────────────────────────────────────
 let cart = [];
-let slipFile = null;
+let slipBase64 = null; // เก็บสลิปเป็น base64 string
 
 // ── Navigation ────────────────────────────────────────────────
 function goPage(name) {
@@ -837,7 +837,7 @@ function goToPayment() {
     qrMissing.style.display = 'flex';
   }
 
-  slipFile = null;
+  slipBase64 = null;
   document.getElementById('slip-preview').style.display = 'none';
   const btn = document.getElementById('btn-submit');
   btn.disabled = true; btn.style.opacity = '0.4'; btn.style.cursor = 'not-allowed';
@@ -889,10 +889,10 @@ function copyAccNo() {
 function handleSlip(e) {
   const file = e.target.files[0];
   if (!file) return;
-  slipFile = file;
   const reader = new FileReader();
   reader.onload = ev => {
-    document.getElementById('slip-img').src = ev.target.result;
+    slipBase64 = ev.target.result; // เก็บเป็น base64 data URL
+    document.getElementById('slip-img').src = slipBase64;
     document.getElementById('slip-preview').style.display = 'block';
     const btn = document.getElementById('btn-submit');
     btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
@@ -932,11 +932,15 @@ async function submitOrder() {
   // Send to Google Apps Script if configured
   if (CONFIG.scriptUrl) {
     try {
-      const formData = new FormData();
-      formData.append('orders', JSON.stringify(cart));
-      formData.append('total', total);
-      if (slipFile) formData.append('slip', slipFile);
-      await fetch(CONFIG.scriptUrl, { method: 'POST', body: formData });
+      // ส่งเป็น URL-encoded string (Apps Script รับได้ดีที่สุด)
+      const params = new URLSearchParams();
+      params.append('orders', JSON.stringify(cart));
+      if (slipBase64) params.append('slip', slipBase64);
+      await fetch(CONFIG.scriptUrl, {
+        method: 'POST',
+        body: params,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
     } catch(e) { /* silent fail */ }
   }
 
